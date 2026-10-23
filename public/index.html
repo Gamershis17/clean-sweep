@@ -70,6 +70,30 @@
     border:2px solid var(--gold2);color:var(--gold);font-weight:800;font-size:1.15rem;padding:12px 22px;border-radius:14px;
     opacity:0;transition:all .25s;pointer-events:none;z-index:9;text-align:center;max-width:92%}
   #banner.show{opacity:1;transform:translateX(-50%) scale(1)}
+  #menuOverlay{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    background:linear-gradient(180deg,rgba(14,10,24,.88),rgba(14,10,24,.78));padding:18px;text-align:center}
+  #menuOverlay.hidden{display:none}
+  #menuOverlay .game-title{font-size:2.3rem;font-weight:900;color:var(--gold);letter-spacing:.02em;text-shadow:0 0 26px rgba(255,210,63,.35);line-height:1.05}
+  #menuOverlay .game-sub{color:var(--muted);font-size:.95rem;margin-bottom:10px;letter-spacing:.14em;text-transform:uppercase}
+  .menu-btn{width:min(320px,86%);padding:16px;border-radius:14px;cursor:pointer;font-weight:900;font-size:1.15rem;letter-spacing:.03em;
+    border:1px solid var(--gold2);background:linear-gradient(180deg,#ffe08a,var(--gold) 55%,var(--gold2));color:#241a00;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+  .menu-btn:active{transform:scale(.97)}
+  .menu-btn.alt{border-color:var(--arcane-dim);background:linear-gradient(180deg,#3a2f63,#241a45);color:var(--text)}
+  #menuOnlineLine{color:var(--muted);font-size:.88rem;margin-top:8px}
+  .set-row{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid #3a3357;border-radius:12px;padding:12px;margin-bottom:8px}
+  .set-row .info{flex:1;text-align:left}
+  .set-row input[type=checkbox]{width:24px;height:24px;accent-color:var(--gold)}
+  .swatches{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .swatch{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.15);cursor:pointer;padding:0}
+  .swatch.sel{border-color:#fff;box-shadow:0 0 0 2px var(--gold)}
+  #sceneOverlay{position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    background:linear-gradient(180deg,rgba(10,7,18,.93),rgba(20,12,34,.9));padding:22px;text-align:center}
+  #sceneOverlay.hidden{display:none}
+  #sceneArt{font-size:4.2rem;line-height:1;filter:drop-shadow(0 10px 22px rgba(0,0,0,.6))}
+  #sceneTitle{font-size:1.5rem;font-weight:900;color:var(--gold)}
+  #sceneText{color:var(--text);font-size:1.02rem;line-height:1.55;max-width:440px}
+  #sceneBtns{display:flex;gap:10px;margin-top:10px}
+  #sceneBtns .big-btn{margin-top:0;width:auto;padding:12px 26px}
   .net-input{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #3a3357;background:#171224;color:var(--text);font-size:1rem;margin-bottom:8px}
   .net-row{display:flex;gap:8px;margin-bottom:8px}
   .net-row .big-btn{margin-top:0}
@@ -96,6 +120,7 @@
     <button class="hud-btn alt" id="roomsBtn">🗺️ Rooms</button>
     <button class="hud-btn alt" id="onlineBtn">🌐 Online</button>
     <div class="hud-card" id="onlinePill" style="display:none"><span id="onlinePillTxt">🟢</span></div>
+    <button class="hud-btn alt" id="menuBtn">🏠 Menu</button>
     <div class="hud-card" id="fpsVal">-- FPS</div>
   </div>
 
@@ -127,6 +152,44 @@
     </div></div>
 
     <div id="banner"></div>
+
+    <div id="menuOverlay">
+      <div class="game-title">🧹 CLEAN SWEEP</div>
+      <div class="game-sub">Cleaning Simulator</div>
+      <button class="menu-btn" id="menuPlayBtn">▶ SINGLE PLAYER</button>
+      <button class="menu-btn alt" id="menuCoopBtn">🌐 CO-OP</button>
+      <button class="menu-btn alt" id="menuCustomBtn">🎨 CUSTOMIZE</button>
+      <button class="menu-btn alt" id="menuSettingsBtn">⚙️ SETTINGS</button>
+      <div id="menuOnlineLine">🟢 connecting…</div>
+    </div>
+
+    <div class="panel" id="settingsPanel"><div class="panel-box">
+      <button class="x" data-close="settingsPanel">✕</button>
+      <h2>⚙️ Settings</h2><div class="sub">Clean Sweep options</div>
+      <div class="set-row"><div class="info"><div class="nm" style="font-weight:800">FPS Counter</div><div class="ds" style="color:var(--muted);font-size:.8rem">Show the frames-per-second readout in the top bar</div></div><input type="checkbox" id="setFps" checked></div>
+      <div class="set-row"><div class="info"><div class="nm" style="font-weight:800">Performance Mode</div><div class="ds" style="color:var(--muted);font-size:.8rem">Fewer dust particles — smoother on older phones</div></div><input type="checkbox" id="setPerf"></div>
+      <button class="big-btn alt" id="setResetBtn">Reset All Progress</button>
+      <p class="tip">Progress (cash, gear, rooms) is saved on this device.</p>
+    </div></div>
+
+    <div class="panel" id="customPanel"><div class="panel-box">
+      <button class="x" data-close="customPanel">✕</button>
+      <h2>🎨 Customize Your Cleaner</h2><div class="sub">Your look saves automatically — co-op friends see it too</div>
+      <div style="text-align:center;margin-bottom:8px"><canvas id="lookPreview" width="132" height="132" style="background:rgba(255,255,255,.04);border:1px solid #3a3357;border-radius:14px"></canvas></div>
+      <div class="sect">Skin</div><div class="swatches" id="swSkin"></div>
+      <div class="sect">Shirt</div><div class="swatches" id="swShirt"></div>
+      <div class="sect">Cap</div><div class="swatches" id="swCap"></div>
+    </div></div>
+
+    <div id="sceneOverlay" class="hidden">
+      <div id="sceneArt">🧹</div>
+      <div id="sceneTitle"></div>
+      <div id="sceneText"></div>
+      <div id="sceneBtns">
+        <button class="big-btn alt" id="sceneSkipBtn">Skip ⏩</button>
+        <button class="big-btn" id="sceneNextBtn">Next ▶</button>
+      </div>
+    </div>
 
     <div class="panel" id="onlinePanel"><div class="panel-box">
       <button class="x" data-close="onlinePanel">✕</button>
@@ -196,7 +259,8 @@ const PAD = { x: W/2 - 78, y: H - 74, w: 156, h: 74 };
 
 // ---------------- State ----------------
 function freshRooms(){ return ROOMS.map((r,i)=>({ u: i===0, lv:0, done:false, grid:null, tot:0 })); }
-let S = { cash:0, brush:0, bag:0, boots:0, drones:0, room:0, bagDust:0, rooms:freshRooms(), seenHint:false };
+let S = { cash:0, brush:0, bag:0, boots:0, drones:0, room:0, bagDust:0, rooms:freshRooms(), seenHint:false,
+          look:{ skin:'#ffd9b3', shirt:'#2f9e8f', cap:'#ffd23f' }, seenScenes:{} };
 let grid = new Float32Array(NCELLS);
 let totalDirt = 1, remainDirt = 0;
 
@@ -485,11 +549,12 @@ function loop(now){
     const fps = Math.round(fpsFrames / fpsTime);
     fpsFrames = 0; fpsTime = 0;
     spawnFactor = fps >= 50 ? 1 : (fps >= 35 ? 0.5 : 0.25);
+    if (typeof SETTINGS !== 'undefined' && SETTINGS.perf) spawnFactor = Math.min(spawnFactor, 0.25);
     const el = document.getElementById('fpsVal');
     const t = fps + ' FPS';
     if (el.textContent !== t) el.textContent = t;
   }
-  const paused = anyPanelOpen();
+  const paused = anyPanelOpen() || !$('menuOverlay').classList.contains('hidden') || !$('sceneOverlay').classList.contains('hidden');
   if (!paused){
     // movement: keyboard or joystick
     let vx = 0, vy = 0;
@@ -600,9 +665,9 @@ function drawPlayer(t){
   ctx.beginPath(); ctx.arc(player.x, player.y, br.r, 0, 7); ctx.stroke();
   // body
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(player.x, player.y+13, 13, 5, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = '#2f9e8f'; ctx.beginPath(); ctx.arc(player.x, player.y, 13, 0, 7); ctx.fill();
-  ctx.fillStyle = '#ffd9b3'; ctx.beginPath(); ctx.arc(player.x, player.y - 3.5, 7.5, 0, 7); ctx.fill();
-  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(player.x, player.y - 6.5, 7.5, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = S.look.shirt; ctx.beginPath(); ctx.arc(player.x, player.y, 13, 0, 7); ctx.fill();
+  ctx.fillStyle = S.look.skin; ctx.beginPath(); ctx.arc(player.x, player.y - 3.5, 7.5, 0, 7); ctx.fill();
+  ctx.fillStyle = S.look.cap; ctx.beginPath(); ctx.arc(player.x, player.y - 6.5, 7.5, Math.PI, 0); ctx.fill();
   ctx.fillStyle = '#241a00'; ctx.fillRect(player.x - 8, player.y - 7.5, 16, 2.6);
 }
 
@@ -689,7 +754,8 @@ function renderRooms(){
     const rs = S.rooms[i];
     const mult = (1 + 0.12*rs.lv).toFixed(2).replace(/\.?0+$/,'');
     let btn;
-    if (i === S.room) btn = '<button class="buy equipped" disabled>YOU ARE HERE</button>';
+    if (i === S.room && rs.done && !(typeof NET !== 'undefined' && NET.on)) btn = '<button class="buy" data-remess="' + i + '">🗑️ Re-mess (+12%)</button>';
+    else if (i === S.room) btn = '<button class="buy equipped" disabled>YOU ARE HERE</button>';
     else if (rs.u) btn = '<button class="buy alt" data-room="' + i + '">Go →</button>';
     else btn = '<button class="buy" data-room="' + i + '" ' + (S.cash < r.unlock ? 'disabled' : '') + '>Unlock ' + money(r.unlock) + '</button>';
     const status = rs.done ? '✅ Cleaned' + (rs.lv ? ' • re-messed ×' + rs.lv : '') : (rs.u ? '🧽 In progress' : '🔒 Locked');
@@ -707,6 +773,12 @@ function renderRooms(){
     switchRoom(i);
     closePanels();
   }));
+  $('roomsBody').querySelectorAll('[data-remess]').forEach(btn => btn.addEventListener('click', ()=>{
+    const i = +btn.dataset.remess;
+    if (i !== S.room) switchRoom(i);
+    remessRoom(i);
+    closePanels();
+  }));
 }
 function switchRoom(i){
   save(); // stash current grid first
@@ -716,6 +788,7 @@ function switchRoom(i){
   renderStatic(); loadRoomGrid(i);
   updateHUD(true);
   save();
+  playScene('room' + i);
 }
 
 // ---------------- Done panel ----------------
@@ -741,21 +814,26 @@ $('nextRoomBtn').addEventListener('click', ()=>{
   }
   switchRoom(next); closePanels();
 });
+function remessRoom(i){
+  const rs = S.rooms[i];
+  rs.lv++; rs.done = false; rs.grid = null;
+  if (i === S.room){ genDirt(i); redrawAllDirt(); }
+  player.x = W/2; player.y = H - 130;
+  save(); updateHUD(true);
+  toast(ROOMS[i].name + ' trashed again! Pay +12% 🗑️');
+}
 $('remessBtn').addEventListener('click', ()=>{
   if (typeof NET !== 'undefined' && NET.on){ NET.remess(); closePanels(); return; }
-  const rs = S.rooms[S.room];
-  rs.lv++; rs.done = false; rs.grid = null;
-  genDirt(S.room); redrawAllDirt();
-  player.x = W/2; player.y = H - 130;
-  closePanels(); save(); updateHUD(true);
-  toast(ROOMS[S.room].name + ' trashed again! Pay +12% 🗑️');
+  remessRoom(S.room);
+  closePanels();
 });
 $('doneCloseBtn').addEventListener('click', closePanels);
-$('resetBtn').addEventListener('click', ()=>{
+function doResetProgress(){
   if (!confirm('Reset ALL Clean Sweep progress?')) return;
   try { localStorage.removeItem(SAVE_KEY); } catch(e){}
   location.reload();
-});
+}
+$('resetBtn').addEventListener('click', doResetProgress);
 
 // ---------------- Input ----------------
 window.addEventListener('keydown', e=>{
@@ -813,6 +891,7 @@ const escH = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;',
 NET.slippery = () => Date.now() < NET.slipperyUntil;
 NET.send = obj => { if (NET.ws && NET.wsOpenFlag) { try { NET.ws.send(JSON.stringify(obj)); } catch(e){} } };
 NET.myName = () => ($('netName').value || 'Guest').trim().slice(0, 16) || 'Guest';
+NET.sendHello = () => NET.send({ t: 'hello', name: NET.myName(), look: S.look });
 
 NET.connect = () => {
   if (NET.ws && (NET.wsOpenFlag || NET.ws.readyState === 0)) return;
@@ -824,7 +903,7 @@ NET.connect = () => {
   NET.ws = ws;
   ws.onopen = () => {
     NET.wsOpenFlag = true;
-    NET.send({ t: 'hello', name: NET.myName() });
+    NET.sendHello();
     NET.send({ t: 'lobby' });
   };
   ws.onclose = () => {
@@ -878,7 +957,10 @@ NET.onMsg = m => {
   }
 };
 
-NET.setStatus = () => { $('netStatus').textContent = '🟢 ' + NET.online + ' player(s) online'; };
+NET.setStatus = () => {
+  $('netStatus').textContent = '🟢 ' + NET.online + ' player(s) online';
+  $('menuOnlineLine').textContent = '🟢 ' + NET.online + ' player(s) online now';
+};
 NET.showErr = msg => {
   const el = $('netErr');
   el.textContent = msg || '';
@@ -891,8 +973,8 @@ NET.applyPlayers = (list, hostId) => {
     if (p.id === NET.id) continue;
     seen.add(p.id);
     const old = NET.players.get(p.id);
-    if (old) { old.name = p.name; old.color = p.color; old.tx = p.x; old.ty = p.y; }
-    else NET.players.set(p.id, { name: p.name, color: p.color, x: p.x, y: p.y, tx: p.x, ty: p.y, face: 0 });
+    if (old) { old.name = p.name; old.color = p.color; old.look = p.look || null; old.tx = p.x; old.ty = p.y; }
+    else NET.players.set(p.id, { name: p.name, color: p.color, look: p.look || null, x: p.x, y: p.y, tx: p.x, ty: p.y, face: 0 });
   }
   for (const id of [...NET.players.keys()]) if (!seen.has(id)) NET.players.delete(id);
   NET.updateRoomInfo(list);
@@ -922,6 +1004,7 @@ NET.adoptSnapshot = snap => {
     player.x = W/2; player.y = H - 130;
     renderStatic();
     toast('You joined room ' + NET.code + ' 🌐');
+    playScene('room' + NET.roomIdx);
   } else if (NET.on) {
     S.room = NET.roomIdx;
     renderStatic();
@@ -975,11 +1058,11 @@ NET.drawRemotes = t => {
     p.x += (p.tx - p.x) * 0.3; p.y += (p.ty - p.y) * 0.3;
     ctx.fillStyle = 'rgba(0,0,0,.25)';
     ctx.beginPath(); ctx.ellipse(p.x, p.y + 13, 13, 5, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = p.color;
+    ctx.fillStyle = (p.look && p.look.shirt) || p.color;
     ctx.beginPath(); ctx.arc(p.x, p.y, 13, 0, 7); ctx.fill();
-    ctx.fillStyle = '#ffd9b3';
+    ctx.fillStyle = (p.look && p.look.skin) || '#ffd9b3';
     ctx.beginPath(); ctx.arc(p.x, p.y - 3.5, 7.5, 0, 7); ctx.fill();
-    ctx.fillStyle = '#ffd23f';
+    ctx.fillStyle = (p.look && p.look.cap) || '#ffd23f';
     ctx.beginPath(); ctx.arc(p.x, p.y - 6.5, 7.5, Math.PI, 0); ctx.fill();
     ctx.font = '700 11px system-ui, sans-serif';
     ctx.textAlign = 'center';
@@ -1079,7 +1162,7 @@ NET.init = () => {
   try { nameEl.value = localStorage.getItem('cleansweep-name') || ''; } catch(e){}
   nameEl.addEventListener('change', () => {
     try { localStorage.setItem('cleansweep-name', nameEl.value); } catch(e){}
-    NET.send({ t: 'hello', name: NET.myName() });
+    NET.sendHello();
   });
   $('onlineBtn').addEventListener('click', () => { openPanel('onlinePanel'); NET.connect(); });
   $('netQuickBtn').addEventListener('click', () => NET.send({ t: 'quick', roomIdx: +$('netRoomSel').value }));
@@ -1092,15 +1175,106 @@ NET.init = () => {
   $('netLeaveBtn').addEventListener('click', () => NET.leave());
 };
 
+// ---------------- Settings / Menu / Customize / Cutscenes ----------------
+var SETTINGS = { fps: true, perf: false };
+try { Object.assign(SETTINGS, JSON.parse(localStorage.getItem('cleansweep-settings') || '{}')); } catch(e){}
+function saveSettings(){ try { localStorage.setItem('cleansweep-settings', JSON.stringify(SETTINGS)); } catch(e){} }
+function applySettings(){
+  $('fpsVal').style.display = SETTINGS.fps ? '' : 'none';
+  $('setFps').checked = SETTINGS.fps;
+  $('setPerf').checked = SETTINGS.perf;
+}
+function showMenu(){ $('menuOverlay').classList.remove('hidden'); }
+function hideMenu(){ $('menuOverlay').classList.add('hidden'); }
+function initMenu(){
+  applySettings();
+  $('menuPlayBtn').addEventListener('click', ()=>{ hideMenu(); playScene('intro'); });
+  $('menuCoopBtn').addEventListener('click', ()=>{ hideMenu(); openPanel('onlinePanel'); NET.connect(); });
+  $('menuCustomBtn').addEventListener('click', ()=>{ renderCustom(); openPanel('customPanel'); });
+  $('menuSettingsBtn').addEventListener('click', ()=>{ openPanel('settingsPanel'); });
+  $('menuBtn').addEventListener('click', showMenu);
+  $('setFps').addEventListener('change', e => { SETTINGS.fps = e.target.checked; saveSettings(); applySettings(); });
+  $('setPerf').addEventListener('change', e => { SETTINGS.perf = e.target.checked; saveSettings(); });
+  $('setResetBtn').addEventListener('click', doResetProgress);
+}
+
+const LOOK_OPTIONS = {
+  skin: ['#ffe0bd','#ffd9b3','#f1c27d','#e0ac69','#c68642','#8d5524'],
+  shirt: ['#2f9e8f','#e0658a','#5cc8ff','#ffb84d','#8b5cf6','#57d977','#ff5b5b','#e8e4f0'],
+  cap: ['#ffd23f','#ff5b5b','#5cc8ff','#57d977','#8b5cf6','#171224','#e8e4f0','#ff8ab0'],
+};
+function drawLookPreview(){
+  const c = $('lookPreview'); if (!c) return;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, 132, 132);
+  g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(66, 112, 30, 8, 0, 0, 7); g.fill();
+  g.strokeStyle = '#7a5c28'; g.lineWidth = 6;
+  g.beginPath(); g.moveTo(84, 84); g.lineTo(104, 104); g.stroke();
+  g.fillStyle = '#c9a86a'; g.fillRect(97, 95, 9, 22);
+  g.fillStyle = S.look.shirt; g.beginPath(); g.arc(66, 74, 34, 0, 7); g.fill();
+  g.fillStyle = S.look.skin; g.beginPath(); g.arc(66, 62, 20, 0, 7); g.fill();
+  g.fillStyle = S.look.cap; g.beginPath(); g.arc(66, 54, 20, Math.PI, 0); g.fill();
+  g.fillStyle = '#241a00'; g.fillRect(45, 52, 42, 6);
+}
+function renderCustom(){
+  const groups = { skin: 'swSkin', shirt: 'swShirt', cap: 'swCap' };
+  for (const kind of Object.keys(groups)) {
+    const box = $(groups[kind]);
+    box.innerHTML = LOOK_OPTIONS[kind].map(col =>
+      '<button class="swatch' + (S.look[kind] === col ? ' sel' : '') + '" data-kind="' + kind + '" data-col="' + col + '" style="background:' + col + '" aria-label="' + kind + ' color"></button>'
+    ).join('');
+    box.querySelectorAll('.swatch').forEach(b => b.addEventListener('click', () => {
+      S.look[b.dataset.kind] = b.dataset.col;
+      save(); renderCustom();
+      if (typeof NET !== 'undefined' && NET.wsOpenFlag) NET.sendHello();
+    }));
+  }
+  drawLookPreview();
+}
+
+const SCENES = {
+  intro: [
+    { art: '🌇', title: 'Welcome to Dustville', text: 'Every room in this city is a disaster waiting to happen — and business is booming.' },
+    { art: '🧹', title: "You're the new cleaner", text: "All you've got is an old brush, a tote bag, and big dreams." },
+    { art: '💰', title: 'Clean. Sell. Upgrade.', text: 'Scrub up dust, sell it at the gold pad, and buy better gear. Now go make that money.' },
+  ],
+  room0: [ { art: '🏠', title: 'Messy Apartment', text: 'A party happened here. Probably several. Nobody cleaned up after any of them.' } ],
+  room1: [ { art: '☕', title: 'Trashed Café', text: 'Coffee, crumbs, and chaos as far as the eye can see. Watch your step.' } ],
+  room2: [ { art: '🚗', title: 'Muddy Garage', text: 'Oil, mud, and mystery stains. Gross — but this one pays a lot better.' } ],
+  room3: [ { art: '👻', title: 'Haunted Mansion', text: "Locals swear the dust moves on its own in here. Just clean fast and don't look behind you." } ],
+};
+let sceneQueue = [], sceneIdx = 0;
+function playScene(key){
+  if (!SCENES[key] || S.seenScenes[key]) return;
+  S.seenScenes[key] = true; save();
+  sceneQueue = SCENES[key]; sceneIdx = 0;
+  showSceneSlide();
+  $('sceneOverlay').classList.remove('hidden');
+}
+function showSceneSlide(){
+  const s = sceneQueue[sceneIdx];
+  if (!s) return;
+  $('sceneArt').textContent = s.art;
+  $('sceneTitle').textContent = s.title;
+  $('sceneText').textContent = s.text;
+  $('sceneNextBtn').textContent = sceneIdx === sceneQueue.length - 1 ? "Let's Go! ▶" : 'Next ▶';
+}
+function endScene(){ $('sceneOverlay').classList.add('hidden'); sceneQueue = []; }
+$('sceneNextBtn').addEventListener('click', ()=>{ sceneIdx++; if (sceneIdx >= sceneQueue.length) endScene(); else showSceneSlide(); });
+$('sceneSkipBtn').addEventListener('click', endScene);
+
 // ---------------- Boot ----------------
 load();
+S.look = Object.assign({ skin:'#ffd9b3', shirt:'#2f9e8f', cap:'#ffd23f' }, S.look || {});
+if (!S.seenScenes) S.seenScenes = {};
 if (S.seenHint) $('hint').style.display = 'none';
 syncDrones();
 renderStatic();
 loadRoomGrid(S.room);
 player.x = W/2; player.y = H - 130;
 updateHUD(true);
-if (typeof NET !== 'undefined') NET.init();
+initMenu();
+if (typeof NET !== 'undefined'){ NET.init(); NET.connect(); }
 setInterval(save, 5000);
 window.addEventListener('beforeunload', save);
 document.addEventListener('visibilitychange', ()=>{ if (document.hidden) save(); });
