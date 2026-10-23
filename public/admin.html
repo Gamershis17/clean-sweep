@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clean Sweep — Owner Troll Console</title>
+<style>
+  body{margin:0;background:#12101a;color:#e8e4f0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;padding:18px}
+  .box{max-width:520px;margin:0 auto;background:linear-gradient(180deg,#2e2742,#1a1626);border:1px solid #5b3ba8;border-radius:16px;padding:18px}
+  h1{color:#ffd23f;font-size:1.3rem;margin:0 0 4px;text-align:center}
+  .sub{color:#9a93b3;text-align:center;font-size:.85rem;margin-bottom:14px}
+  label{display:block;color:#9a93b3;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;margin:12px 0 5px}
+  input{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #3a3357;background:#171224;color:#e8e4f0;font-size:1rem}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+  button{cursor:pointer;border:1px solid #d4a017;background:linear-gradient(180deg,#ffe08a,#ffd23f 55%,#d4a017);color:#241a00;
+    font-weight:800;border-radius:12px;padding:13px 8px;font-size:.95rem}
+  button:active{transform:scale(.97)}
+  button.alt{border-color:#5b3ba8;background:linear-gradient(180deg,#3a2f63,#241a45);color:#e8e4f0}
+  #stats{text-align:center;color:#9a93b3;margin-top:14px;font-size:.9rem}
+  #log{margin-top:12px;font-size:.85rem;color:#a9e5b8;text-align:center;min-height:1.2em}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>😈 Clean Sweep — Troll Console</h1>
+  <div class="sub">Owner only. Everything here hits every connected player, live.</div>
+  <label>Admin key</label>
+  <input id="key" type="password" placeholder="ADMIN_KEY" autocomplete="off">
+  <div class="grid">
+    <button data-kind="messbomb">🗑️ Mess Bomb</button>
+    <button data-kind="slippery">🧊 Slippery Floor (30s)</button>
+    <button data-kind="duststorm">🌟 Dust Storm</button>
+    <button data-kind="confetti">🎉 Confetti Blast</button>
+    <button data-kind="fakerestart" class="alt">⚠️ Fake Restart Popup</button>
+    <button data-kind="announce" class="alt">📣 Announce (uses text below)</button>
+  </div>
+  <label>Announcement text</label>
+  <input id="msg" type="text" placeholder="Type an announcement for all players…" maxlength="140">
+  <div id="stats">players online: —</div>
+  <div id="log"></div>
+</div>
+<script>
+  const $ = id => document.getElementById(id);
+  const keyEl = $('key');
+  keyEl.value = sessionStorage.getItem('cs-admin-key') || '';
+  keyEl.addEventListener('change', () => sessionStorage.setItem('cs-admin-key', keyEl.value));
+  async function stats(){
+    try {
+      const r = await fetch('/api/stats'); const d = await r.json();
+      $('stats').textContent = 'players online: ' + d.online + ' • rooms open: ' + d.rooms + ' • cleaning together: ' + d.inRooms;
+    } catch { $('stats').textContent = 'players online: ?'; }
+  }
+  stats(); setInterval(stats, 4000);
+  document.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', async () => {
+    const kind = b.dataset.kind;
+    $('log').textContent = 'sending…';
+    try {
+      const r = await fetch('/api/admin/troll', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: keyEl.value, kind, msg: $('msg').value }),
+      });
+      const d = await r.json();
+      $('log').textContent = r.ok ? ('😈 ' + kind + ' hit ' + d.reached + ' player(s)!') : ('⛔ ' + (d.error || 'failed'));
+      if (r.ok) sessionStorage.setItem('cs-admin-key', keyEl.value);
+    } catch { $('log').textContent = '⛔ server unreachable'; }
+  }));
+</script>
+</body>
+</html>

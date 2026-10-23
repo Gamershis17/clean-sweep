@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Clean Sweep — Cleaning Simulator</title>
+<style>
+  :root{
+    --bg:#12101a; --bg2:#1a1626; --stone:#241f33; --stone2:#2e2742;
+    --gold:#ffd23f; --gold2:#d4a017; --text:#e8e4f0; --muted:#9a93b3;
+    --arcane:#8b5cf6; --arcane-dim:#5b3ba8; --good:#57d977; --bad:#ff5b5b;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:radial-gradient(1100px 600px at 50% -10%,#241f38,var(--bg));color:var(--text);
+    font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+  #wrap{max-width:1020px;margin:0 auto;padding:10px 10px 26px}
+  #hud{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin-bottom:8px}
+  .hud-card{background:linear-gradient(180deg,var(--stone2),var(--stone));border:1px solid #3a3357;border-radius:12px;
+    padding:7px 12px;display:flex;align-items:center;gap:8px;min-height:46px}
+  .hud-card .lbl{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+  .hud-card .val{font-weight:800;font-size:1.05rem}
+  #cashVal{color:var(--gold)}
+  .bar{width:110px;height:10px;background:#171224;border-radius:6px;overflow:hidden;border:1px solid #3a3357}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,#c9a86a,#e8cf8f);width:0%}
+  #cleanBar>i{background:linear-gradient(90deg,#3fae5a,var(--good))}
+  .hud-btn{cursor:pointer;border:1px solid var(--gold2);background:linear-gradient(180deg,#3a2f10,#241c08);color:var(--gold);
+    font-weight:800;border-radius:12px;padding:0 18px;font-size:.98rem;min-height:46px}
+  .hud-btn:active{transform:scale(.96)}
+  .hud-btn.alt{border-color:var(--arcane-dim);background:linear-gradient(180deg,#2c2150,#1b1433);color:#cdbcf5}
+  #fpsVal{color:var(--muted);font-weight:700;font-size:.85rem;min-width:64px;text-align:center}
+  #stage{position:relative;width:100%;aspect-ratio:16/9;background:#0b0912;border-radius:16px;overflow:hidden;
+    border:1px solid #3a3357;box-shadow:0 14px 44px rgba(0,0,0,.55)}
+  canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  #joyBase{position:absolute;width:110px;height:110px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+    background:rgba(255,255,255,.07);display:none;pointer-events:none;z-index:5}
+  #joyNub{position:absolute;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.45);
+    display:none;pointer-events:none;z-index:5}
+  #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%) translateY(-8px);background:rgba(18,14,28,.92);
+    border:1px solid var(--gold2);color:var(--gold);font-weight:800;padding:8px 18px;border-radius:999px;
+    opacity:0;transition:all .25s;pointer-events:none;z-index:8;font-size:.95rem;white-space:nowrap}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(18,14,28,.88);color:var(--text);
+    padding:7px 14px;border-radius:999px;font-size:.85rem;pointer-events:none;z-index:6;border:1px solid #3a3357;white-space:nowrap}
+  .panel{position:absolute;inset:0;background:rgba(8,6,14,.72);display:none;z-index:10;align-items:center;justify-content:center;padding:12px}
+  .panel.open{display:flex}
+  .panel-box{background:linear-gradient(180deg,var(--stone2),var(--bg2));border:1px solid var(--arcane-dim);border-radius:16px;
+    width:100%;max-width:560px;max-height:100%;overflow-y:auto;padding:16px;box-shadow:0 12px 48px rgba(0,0,0,.6)}
+  .panel-box h2{margin:0 0 4px;color:var(--gold);font-size:1.25rem;text-align:center}
+  .panel-box .sub{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:12px}
+  .sect{color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-size:.72rem;margin:14px 0 6px}
+  .row{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid #3a3357;border-radius:12px;
+    padding:9px 12px;margin-bottom:7px}
+  .row .info{flex:1;min-width:0}
+  .row .nm{font-weight:800}
+  .row .ds{color:var(--muted);font-size:.8rem}
+  .buy{cursor:pointer;border:1px solid var(--gold2);background:linear-gradient(180deg,#ffe08a,var(--gold) 55%,var(--gold2));
+    color:#241a00;font-weight:800;border-radius:10px;padding:9px 13px;font-size:.9rem;white-space:nowrap}
+  .buy:disabled{filter:grayscale(.8);opacity:.55;cursor:default}
+  .buy.equipped{background:#2c4a33;color:#a9e5b8;border-color:#3fae5a}
+  .buy.alt{background:linear-gradient(180deg,#3a3357,#241f33);color:var(--text);border-color:#554a80}
+  .x{position:sticky;top:0;float:right;cursor:pointer;background:none;border:none;color:var(--muted);font-size:1.3rem;line-height:1}
+  .big-btn{display:block;width:100%;margin-top:10px;padding:13px;border-radius:12px;cursor:pointer;font-weight:800;font-size:1rem;
+    border:1px solid var(--gold2);background:linear-gradient(180deg,#ffe08a,var(--gold) 55%,var(--gold2));color:#241a00}
+  .big-btn.alt{border-color:var(--arcane-dim);background:linear-gradient(180deg,#3a2f63,#241a45);color:var(--text)}
+  .big-btn:disabled{filter:grayscale(.8);opacity:.55;cursor:default}
+  .danger-zone{margin-top:16px;text-align:center}
+  .danger-zone button{background:none;border:none;color:#8a829e;font-size:.8rem;cursor:pointer;text-decoration:underline}
+  p.tip{color:var(--muted);font-size:.85rem;text-align:center;line-height:1.5}
+  #banner{position:absolute;left:50%;top:52px;transform:translateX(-50%) scale(.9);background:rgba(18,14,28,.94);
+    border:2px solid var(--gold2);color:var(--gold);font-weight:800;font-size:1.15rem;padding:12px 22px;border-radius:14px;
+    opacity:0;transition:all .25s;pointer-events:none;z-index:9;text-align:center;max-width:92%}
+  #banner.show{opacity:1;transform:translateX(-50%) scale(1)}
+  .net-input{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #3a3357;background:#171224;color:var(--text);font-size:1rem;margin-bottom:8px}
+  .net-row{display:flex;gap:8px;margin-bottom:8px}
+  .net-row .big-btn{margin-top:0}
+  #netStatus{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:10px}
+  #netErr{color:var(--bad);text-align:center;font-size:.88rem;min-height:1.1em;margin-top:6px}
+  #netRoomInfo{display:none;background:rgba(87,217,119,.08);border:1px solid #3fae5a;border-radius:12px;padding:10px 12px;margin-bottom:10px;text-align:center}
+  #netCode{font-size:1.5rem;font-weight:800;letter-spacing:.25em;color:var(--gold)}
+  #netPlayers{color:var(--muted);font-size:.88rem;margin-top:4px;line-height:1.5}
+  @media (max-width:640px){
+    .bar{width:74px}
+    .hud-card{padding:6px 9px}
+    .hud-btn{padding:0 13px}
+    #hint{font-size:.75rem;max-width:94%;white-space:normal;text-align:center}
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <div class="hud-card"><span style="font-size:1.2rem">🧹</span><div><div class="lbl">Clean Sweep</div><div class="val" id="cashVal">$0</div></div></div>
+    <div class="hud-card"><span style="font-size:1.1rem">🧺</span><div><div class="lbl">Dust Bag</div><div class="val" id="bagVal">0 / 60</div></div><div class="bar" id="bagBar"><i></i></div></div>
+    <div class="hud-card"><span style="font-size:1.1rem">🏠</span><div><div class="lbl" id="roomName">Messy Apartment</div><div class="val" id="cleanVal">0% clean</div></div><div class="bar" id="cleanBar"><i></i></div></div>
+    <button class="hud-btn" id="shopBtn">🛒 Shop</button>
+    <button class="hud-btn alt" id="roomsBtn">🗺️ Rooms</button>
+    <button class="hud-btn alt" id="onlineBtn">🌐 Online</button>
+    <div class="hud-card" id="onlinePill" style="display:none"><span id="onlinePillTxt">🟢</span></div>
+    <div class="hud-card" id="fpsVal">-- FPS</div>
+  </div>
+
+  <div id="stage">
+    <canvas id="game"></canvas>
+    <div id="joyBase"></div><div id="joyNub"></div>
+    <div id="toast"></div>
+    <div id="hint">Move: WASD / arrows / drag &nbsp;•&nbsp; Scrub dirt to fill your bag &nbsp;•&nbsp; Stand on the gold SELL pad to cash in</div>
+
+    <div class="panel" id="shopPanel"><div class="panel-box">
+      <button class="x" data-close="shopPanel">✕</button>
+      <h2>🛒 Cleaning Shop</h2><div class="sub">Better gear = faster cleaning = more cash</div>
+      <div id="shopBody"></div>
+      <div class="danger-zone"><button id="resetBtn">reset all progress</button></div>
+    </div></div>
+
+    <div class="panel" id="roomsPanel"><div class="panel-box">
+      <button class="x" data-close="roomsPanel">✕</button>
+      <h2>🗺️ Rooms</h2><div class="sub">Dirtier rooms pay more per dust — and finishing one pays a bonus</div>
+      <div id="roomsBody"></div>
+    </div></div>
+
+    <div class="panel" id="donePanel"><div class="panel-box" style="text-align:center">
+      <h2>✨ ROOM CLEAN! ✨</h2>
+      <p class="tip" id="doneText">You earned a bonus.</p>
+      <button class="big-btn" id="nextRoomBtn">Next Room →</button>
+      <button class="big-btn alt" id="remessBtn">Mess It Up Again (+12% pay)</button>
+      <button class="big-btn alt" id="doneCloseBtn">Keep Looking Around</button>
+    </div></div>
+
+    <div id="banner"></div>
+
+    <div class="panel" id="onlinePanel"><div class="panel-box">
+      <button class="x" data-close="onlinePanel">✕</button>
+      <h2>🌐 Co-op Cleaning</h2><div class="sub">Clean together — 2 to 4 players per room. Public rooms anyone can join, private rooms need the code.</div>
+      <div id="netStatus">Connecting…</div>
+      <div id="netRoomInfo">
+        <div style="color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.08em">Your room code — share it with friends</div>
+        <div id="netCode">----</div>
+        <div id="netPlayers"></div>
+        <button class="big-btn alt" id="netLeaveBtn">Leave Room</button>
+      </div>
+      <div id="netLobby">
+        <label style="display:block;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Your cleaner name</label>
+        <input class="net-input" id="netName" maxlength="16" placeholder="e.g. DustBuster99">
+        <label style="display:block;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Room to clean</label>
+        <select class="net-input" id="netRoomSel">
+          <option value="0">Messy Apartment</option>
+          <option value="1">Trashed Café</option>
+          <option value="2">Muddy Garage</option>
+          <option value="3">Haunted Mansion</option>
+        </select>
+        <button class="big-btn" id="netQuickBtn">▶ Quick Play (Public)</button>
+        <button class="big-btn alt" id="netCreateBtn">🔒 Create Private Room</button>
+        <div class="net-row" style="margin-top:8px">
+          <input class="net-input" id="netCodeInput" maxlength="4" placeholder="CODE" style="text-transform:uppercase;text-align:center;letter-spacing:.2em;margin-bottom:0">
+          <button class="big-btn alt" id="netJoinBtn" style="flex:0 0 42%">Join with Code</button>
+        </div>
+        <div class="sect">Open public rooms</div>
+        <div id="netRooms"><p class="tip">None yet — start one!</p></div>
+      </div>
+      <div id="netErr"></div>
+    </div></div>
+  </div>
+
+  <p class="tip">Sell dust at the gold pad • Finish a room for a bonus • Re-mess a finished room for +12% pay each time • Progress saves automatically</p>
+</div>
+
+<script>
+'use strict';
+/* CLEAN SWEEP — cleaning simulator.
+   Perf: floor pre-rendered once per room; dirt on its own canvas with only
+   changed cells redrawn; fixed particle pool; DPR capped at 2; dt clamped. */
+
+// ---------------- Config ----------------
+const W = 960, H = 540, CELL = 30, COLS = 32, ROWS = 18, NCELLS = COLS * ROWS;
+const WALL = 26;
+const ROOMS = [
+  { name:'Messy Apartment', theme:'wood',     price:1,   bonus:150,  unlock:0,     splats:80,  dirt:'#4a3421', speck:'#2e2013' },
+  { name:'Trashed Café',    theme:'tile',     price:2.5, bonus:500,  unlock:400,   splats:95,  dirt:'#5c4a33', speck:'#33271a' },
+  { name:'Muddy Garage',    theme:'concrete', price:6,   bonus:1800, unlock:2500,  splats:110, dirt:'#3a352c', speck:'#14110d' },
+  { name:'Haunted Mansion', theme:'mansion',  price:15,  bonus:7500, unlock:12000, splats:130, dirt:'#6e6258', speck:'#453c33' },
+];
+const BRUSHES = [
+  { name:'Old Brush',       r:26, s:0.55, price:0 },
+  { name:'Scrub Brush',     r:34, s:0.85, price:150 },
+  { name:'Power Scrubber', r:42, s:1.15, price:600 },
+  { name:'Turbo Vac',       r:50, s:1.55, price:2400 },
+  { name:'Hydro Blaster',   r:58, s:2.05, price:9000 },
+  { name:'Quantum Cleaner', r:68, s:2.75, price:32000 },
+];
+const BAGS  = [ {cap:60,price:0},{cap:150,price:120},{cap:380,price:500},{cap:950,price:2000},{cap:2400,price:8000},{cap:6000,price:28000} ];
+const BAG_NAMES = ['Tote Bag','Dust Sack','Trash Bin','Big Barrel','Dust Tank','Vacuum Vault'];
+const BOOTS = [ {name:'Sneakers',price:0},{name:'Runners',price:100},{name:'Speed Boots',price:450},{name:'Rocket Shoes',price:1800},{name:'Lightning Treads',price:7000} ];
+const DRONE_PRICE = 1500, DRONE_MAX = 3;
+const SAVE_KEY = 'cleansweep-v1';
+const PAD = { x: W/2 - 78, y: H - 74, w: 156, h: 74 };
+
+// ---------------- State ----------------
+function freshRooms(){ return ROOMS.map((r,i)=>({ u: i===0, lv:0, done:false, grid:null, tot:0 })); }
+let S = { cash:0, brush:0, bag:0, boots:0, drones:0, room:0, bagDust:0, rooms:freshRooms(), seenHint:false };
+let grid = new Float32Array(NCELLS);
+let totalDirt = 1, remainDirt = 0;
+
+function save(){
+  try {
+    if (!(typeof NET !== 'undefined' && NET.on)) { S.rooms[S.room].grid = gridToB64(); S.rooms[S.room].tot = totalDirt; }
+    localStorage.setItem(SAVE_KEY, JSON.stringify(S));
+  } catch(e){ /* storage blocked — game continues unsaved */ }
+}
+function load(){
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (!d || !Array.isArray(d.rooms) || d.rooms.length !== ROOMS.length) return;
+    S = Object.assign(S, d);
+    S.rooms = d.rooms.map((r,i)=>Object.assign({u:i===0,lv:0,done:false,grid:null,tot:0}, r));
+  } catch(e){ /* corrupted save — start fresh */ }
+}
+function gridToB64(){
+  const bytes = new Uint8Array(NCELLS);
+  for (let i=0;i<NCELLS;i++) bytes[i] = Math.max(0, Math.min(255, Math.round(grid[i]*255)));
+  let bin = '';
+  for (let i=0;i<NCELLS;i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function gridFromB64(b64){
+  const bin = atob(b64), out = new Float32Array(NCELLS);
+  for (let i=0;i<NCELLS && i<bin.length;i++) out[i] = bin.charCodeAt(i)/255;
+  return out;
+}
+
+// ---------------- Canvas setup ----------------
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const staticC = document.createElement('canvas'); staticC.width = W; staticC.height = H;
+const dirtC   = document.createElement('canvas'); dirtC.width = W;   dirtC.height = H;
+const dctx = dirtC.getContext('2d');
+function fitCanvas(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', fitCanvas);
+fitCanvas();
+function roundRect(g,x,y,w,h,r){
+  g.beginPath();
+  g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
+  g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
+}
+
+// ---------------- Dirt sprites ----------------
+let blobSprites = [];
+function makeBlobs(color, speck){
+  blobSprites = [];
+  for (let v=0; v<5; v++){
+    const c = document.createElement('canvas'); c.width = CELL; c.height = CELL;
+    const g = c.getContext('2d');
+    g.fillStyle = color;
+    for (let k=0;k<7;k++){
+      const x = 6 + Math.random()*18, y = 6 + Math.random()*18, r = 5 + Math.random()*8;
+      g.beginPath(); g.ellipse(x, y, r, r*(0.6+Math.random()*0.5), Math.random()*3, 0, 7); g.fill();
+    }
+    g.fillStyle = speck;
+    for (let k=0;k<9;k++){ g.beginPath(); g.arc(Math.random()*CELL, Math.random()*CELL, 1+Math.random()*1.6, 0, 7); g.fill(); }
+    blobSprites.push(c);
+  }
+}
+
+// ---------------- Room dirt ----------------
+let cellSpr = new Uint8Array(NCELLS);
+const dirtyCells = new Set();
+function genDirt(idx){
+  const def = ROOMS[idx];
+  grid = new Float32Array(NCELLS);
+  for (let i=0;i<NCELLS;i++){ grid[i] = Math.random()*0.18; cellSpr[i] = (Math.random()*5)|0; }
+  for (let s=0; s<def.splats; s++){
+    const cx = (Math.random()*COLS)|0, cy = (Math.random()*ROWS)|0;
+    const rad = 1 + Math.random()*2.2, str = 0.45 + Math.random()*0.55, r2 = Math.ceil(rad);
+    for (let y=cy-r2; y<=cy+r2; y++) for (let x=cx-r2; x<=cx+r2; x++){
+      if (x<0||y<0||x>=COLS||y>=ROWS) continue;
+      const d = Math.hypot(x-cx, y-cy);
+      if (d<=rad){ const i=y*COLS+x; grid[i] = Math.min(1, grid[i] + str*(1 - d/(rad+0.6))); }
+    }
+  }
+  for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++){
+    const px = x*CELL+CELL/2, py = y*CELL+CELL/2;
+    if (px>PAD.x-36 && px<PAD.x+PAD.w+36 && py>PAD.y-40) grid[y*COLS+x] *= 0.15;
+  }
+  totalDirt = 0; for (let i=0;i<NCELLS;i++) totalDirt += grid[i];
+  if (totalDirt < 1) totalDirt = 1;
+  remainDirt = totalDirt;
+}
+function loadRoomGrid(idx){
+  const rs = S.rooms[idx];
+  makeBlobs(ROOMS[idx].dirt, ROOMS[idx].speck);
+  let ok = false;
+  if (rs.grid){
+    try { grid = gridFromB64(rs.grid); totalDirt = rs.tot > 1 ? rs.tot : 1; ok = true; } catch(e){ ok = false; }
+  }
+  if (!ok) genDirt(idx);
+  else {
+    for (let i=0;i<NCELLS;i++) cellSpr[i] = (Math.random()*5)|0;
+    remainDirt = 0; for (let i=0;i<NCELLS;i++) remainDirt += grid[i];
+  }
+  redrawAllDirt();
+}
+function redrawCell(i){
+  const x = (i%COLS)*CELL, y = ((i/COLS)|0)*CELL;
+  dctx.clearRect(x, y, CELL, CELL);
+  const d = grid[i];
+  if (d > 0.02){
+    dctx.globalAlpha = Math.min(1, d*1.15);
+    dctx.drawImage(blobSprites[cellSpr[i]], x, y);
+    dctx.globalAlpha = 1;
+  }
+}
+function redrawAllDirt(){
+  dctx.clearRect(0,0,W,H);
+  for (let i=0;i<NCELLS;i++) if (grid[i] > 0.02) redrawCell(i);
+}
+
+// ---------------- Static room layer ----------------
+function renderStatic(){
+  const g = staticC.getContext('2d');
+  const theme = ROOMS[S.room].theme;
+  g.clearRect(0,0,W,H);
+  if (theme === 'tile'){
+    for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++){
+      g.fillStyle = (x+y)%2 ? '#b9c1c7' : '#d3d8dc';
+      g.fillRect(x*CELL, y*CELL, CELL, CELL);
+    }
+  } else if (theme === 'concrete'){
+    g.fillStyle = '#8d8d91'; g.fillRect(0,0,W,H);
+    g.strokeStyle = 'rgba(0,0,0,.14)'; g.lineWidth = 2;
+    for (let i=0;i<7;i++){
+      g.beginPath(); let x = Math.random()*W, y = 0; g.moveTo(x,y);
+      while (y<H){ x += (Math.random()-0.5)*60; y += 40+Math.random()*40; g.lineTo(x,y); }
+      g.stroke();
+    }
+  } else {
+    const base = theme === 'mansion' ? '#4a3423' : '#77552f';
+    const dark = theme === 'mansion' ? '#3b291b' : '#624324';
+    g.fillStyle = base; g.fillRect(0,0,W,H);
+    g.fillStyle = dark;
+    for (let y=0;y<H;y+=44) g.fillRect(0, y, W, 3);
+    g.fillStyle = 'rgba(0,0,0,.10)';
+    for (let x=0;x<W;x+=118) g.fillRect(x, 0, 2, H);
+  }
+  if (theme === 'wood'){
+    g.fillStyle = '#7a3038'; roundRect(g, 330, 190, 300, 170, 14); g.fill();
+    g.fillStyle = '#8f3d46'; roundRect(g, 348, 208, 264, 134, 10); g.fill();
+    g.fillStyle = 'rgba(0,0,0,.28)'; roundRect(g, 60, 44, 210, 74, 12); g.fill();
+    g.beginPath(); g.arc(850, 90, 42, 0, 7); g.fill();
+  } else if (theme === 'tile'){
+    g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(30, 34, W-60, 56);
+    g.fillStyle = 'rgba(255,255,255,.20)';
+    [[220,220],[480,300],[720,200]].forEach(([x,y])=>{ g.beginPath(); g.arc(x, y, 40, 0, 7); g.fill(); });
+  } else if (theme === 'concrete'){
+    g.fillStyle = 'rgba(0,0,0,.30)';
+    [[70,70],[130,70],[860,440],[800,440]].forEach(([x,y])=>{ g.beginPath(); g.arc(x, y, 30, 0, 7); g.fill(); });
+    g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(330, 34, 300, 50);
+  } else {
+    g.fillStyle = '#4b2a5e'; roundRect(g, 280, 150, 400, 240, 16); g.fill();
+    g.fillStyle = '#5b3573'; roundRect(g, 300, 170, 360, 200, 12); g.fill();
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(410, 30, 140, 60);
+    g.fillStyle = 'rgba(255,120,40,.35)'; g.fillRect(455, 52, 50, 30);
+  }
+  // sell pad
+  g.fillStyle = '#8a6a1a'; roundRect(g, PAD.x-5, PAD.y-3, PAD.w+10, PAD.h+6, 14); g.fill();
+  g.fillStyle = '#ffd23f'; roundRect(g, PAD.x, PAD.y, PAD.w, PAD.h, 12); g.fill();
+  g.fillStyle = '#5e4303';
+  g.font = '800 26px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('SELL 💵', W/2, PAD.y + PAD.h/2 + 1);
+  // walls + vignette
+  g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 10; g.strokeRect(0,0,W,H);
+  const vg = g.createRadialGradient(W/2, H/2, H*0.42, W/2, H/2, H*0.95);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.32)');
+  g.fillStyle = vg; g.fillRect(0,0,W,H);
+}
+
+// ---------------- Entities ----------------
+const player = { x: W/2, y: H-130, face: -Math.PI/2, moving:false };
+let dronesArr = [];
+function syncDrones(){
+  while (dronesArr.length < S.drones)
+    dronesArr.push({ x: W/2 - 60 + dronesArr.length*44, y: H-110, tx:0, ty:0, retarget:0 });
+  dronesArr.length = S.drones;
+}
+const bagCap = () => BAGS[S.bag].cap;
+const payMult = () => 1 + 0.12 * S.rooms[S.room].lv;
+
+// particles: fixed pool, reused objects — no per-frame allocation
+const PPOOL = [];
+for (let i=0;i<170;i++) PPOOL.push({ on:false, x:0, y:0, vx:0, vy:0, life:0, max:1, size:3, color:'#fff', text:null, grav:0 });
+let pCursor = 0, spawnFactor = 1;
+function spawnP(o){
+  const p = PPOOL[pCursor]; pCursor = (pCursor+1) % PPOOL.length;
+  Object.assign(p, { on:true, life:o.max }, o);
+}
+function spawnPuff(x, y, color){
+  if (Math.random() > spawnFactor) return;
+  spawnP({ x, y, vx:(Math.random()-0.5)*36, vy:-14-Math.random()*26, max:0.45+Math.random()*0.3,
+           size:2.5+Math.random()*3.5, color: color || 'rgba(216,200,170,', text:null, grav:-18 });
+}
+function spawnText(x, y, str, color){
+  spawnP({ x, y, vx:0, vy:-44, max:1.05, size:16, color: color || '#ffd23f', text:str, grav:0 });
+}
+function confetti(x, y){
+  const cols = ['#ffd23f','#8b5cf6','#57d977','#ff8ab0','#5cc8ff'];
+  for (let i=0;i<70;i++)
+    spawnP({ x, y, vx:(Math.random()-0.5)*320, vy:-60-Math.random()*220, max:0.9+Math.random()*0.7,
+             size:3+Math.random()*3.5, color: cols[(Math.random()*cols.length)|0], text:null, grav:330 });
+}
+function updateParticles(dt){
+  for (const p of PPOOL){
+    if (!p.on) continue;
+    p.life -= dt;
+    if (p.life <= 0){ p.on = false; continue; }
+    p.vy += p.grav * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+  }
+}
+
+// ---------------- Scrubbing ----------------
+function scrubAt(x, y, R, rate, dt){
+  const space = bagCap() - S.bagDust;
+  if (space <= 0.001) return 0;
+  let removed = 0;
+  const minCx = Math.max(0, ((x-R)/CELL)|0), maxCx = Math.min(COLS-1, ((x+R)/CELL)|0);
+  const minCy = Math.max(0, ((y-R)/CELL)|0), maxCy = Math.min(ROWS-1, ((y+R)/CELL)|0);
+  for (let cy=minCy; cy<=maxCy; cy++) for (let cx=minCx; cx<=maxCx; cx++){
+    const i = cy*COLS+cx;
+    if (grid[i] <= 0.005) continue;
+    const d = Math.hypot(cx*CELL+CELL/2 - x, cy*CELL+CELL/2 - y);
+    if (d > R + CELL*0.4) continue;
+    const fall = Math.max(0.25, 1 - (d/R)*0.55);
+    let amt = Math.min(grid[i], rate*dt*fall, space - removed);
+    if (amt <= 0) continue;
+    grid[i] -= amt; removed += amt;
+    dirtyCells.add(i);
+    if (Math.random() < 0.3) spawnPuff(cx*CELL+CELL/2, cy*CELL+CELL/2, ROOMS[S.room].dirt);
+    if (removed >= space) break;
+  }
+  if (removed > 0){
+    S.bagDust += removed; remainDirt = Math.max(0, remainDirt - removed);
+    if (!(typeof NET !== 'undefined' && NET.on) && !S.rooms[S.room].done && remainDirt <= Math.max(1.5, totalDirt*0.004)) completeRoom();
+  }
+  return removed;
+}
+
+// ---------------- Completion / selling ----------------
+function completeRoom(){
+  const rs = S.rooms[S.room];
+  rs.done = true;
+  for (let i=0;i<NCELLS;i++) if (grid[i] < 0.06){ if (grid[i] > 0.02) dirtyCells.add(i); grid[i] = 0; }
+  remainDirt = 0;
+  const bonus = Math.round(ROOMS[S.room].bonus * payMult());
+  S.cash += bonus;
+  confetti(W/2, H/2 - 40);
+  spawnText(W/2, H/2 - 110, 'BONUS +$' + bonus.toLocaleString('en-US'), '#57d977');
+  save(); updateHUD(true);
+  setTimeout(()=>{ if (!anyPanelOpen()) openDone(bonus); }, 650);
+}
+function trySell(){
+  if (S.bagDust <= 0.05) return;
+  if (player.x > PAD.x && player.x < PAD.x+PAD.w && player.y > PAD.y - 8){
+    const payout = Math.round(S.bagDust * ROOMS[S.room].price * payMult());
+    S.cash += payout; S.bagDust = 0;
+    spawnText(player.x, player.y - 34, '+$' + payout.toLocaleString('en-US'));
+    toast('Sold dust for $' + payout.toLocaleString('en-US') + ' 💰');
+    save(); updateHUD(true);
+  }
+}
+
+// ---------------- Main loop ----------------
+const keys = {};
+let joyVec = { x:0, y:0 }, lastT = performance.now();
+let fpsFrames = 0, fpsTime = 0;
+function loop(now){
+  requestAnimationFrame(loop);
+  let dt = (now - lastT) / 1000; lastT = now;
+  if (dt > 0.05) dt = 0.05;
+  fpsFrames++; fpsTime += dt;
+  if (fpsTime >= 0.5){
+    const fps = Math.round(fpsFrames / fpsTime);
+    fpsFrames = 0; fpsTime = 0;
+    spawnFactor = fps >= 50 ? 1 : (fps >= 35 ? 0.5 : 0.25);
+    const el = document.getElementById('fpsVal');
+    const t = fps + ' FPS';
+    if (el.textContent !== t) el.textContent = t;
+  }
+  const paused = anyPanelOpen();
+  if (!paused){
+    // movement: keyboard or joystick
+    let vx = 0, vy = 0;
+    if (keys['arrowleft'] || keys['a']) vx -= 1;
+    if (keys['arrowright'] || keys['d']) vx += 1;
+    if (keys['arrowup'] || keys['w']) vy -= 1;
+    if (keys['arrowdown'] || keys['s']) vy += 1;
+    if (vx === 0 && vy === 0){ vx = joyVec.x; vy = joyVec.y; }
+    if (typeof NET !== 'undefined' && NET.slippery()){ vx = -vx; vy = -vy; }
+    const len = Math.hypot(vx, vy);
+    player.moving = len > 0.12;
+    if (player.moving){
+      if (len > 1){ vx /= len; vy /= len; }
+      const spd = 178 * (1 + 0.12 * S.boots);
+      player.x += vx * spd * dt; player.y += vy * spd * dt;
+      player.face = Math.atan2(vy, vx);
+      hideHint();
+    }
+    player.x = Math.max(WALL, Math.min(W - WALL, player.x));
+    player.y = Math.max(WALL, Math.min(H - WALL + 6, player.y));
+    if (typeof NET !== 'undefined') NET.posTick(now);
+    // player scrub
+    const br = BRUSHES[S.brush];
+    if (S.bagDust >= bagCap() - 0.001){
+      if (player.moving && Math.random() < dt*2) spawnText(player.x, player.y - 30, 'BAG FULL!', '#ff5b5b');
+    } else {
+      const rp = scrubAt(player.x, player.y, br.r, br.s, dt);
+      if (rp > 0 && typeof NET !== 'undefined') NET.intent(player.x, player.y, S.brush);
+    }
+    // drones
+    for (const d of dronesArr){
+      d.retarget -= dt;
+      if (d.retarget <= 0){
+        d.retarget = 0.35;
+        let best = -1, bd = 1e12;
+        for (let i=0;i<NCELLS;i++){
+          if (grid[i] < 0.3) continue;
+          const px = (i%COLS)*CELL+CELL/2 - d.x, py = ((i/COLS)|0)*CELL+CELL/2 - d.y;
+          const dd = px*px + py*py;
+          if (dd < bd){ bd = dd; best = i; }
+        }
+        if (best >= 0){ d.tx = (best%COLS)*CELL+CELL/2; d.ty = ((best/COLS)|0)*CELL+CELL/2; }
+        else { d.tx = W/2; d.ty = H - 120; }
+      }
+      const dx = d.tx - d.x, dy = d.ty - d.y, dl = Math.hypot(dx, dy);
+      if (dl > 6){ d.x += dx/dl * 128 * dt; d.y += dy/dl * 128 * dt; }
+      if (S.bagDust < bagCap() - 0.001){
+        const rd = scrubAt(d.x, d.y, 21, 0.5, dt);
+        if (rd > 0 && typeof NET !== 'undefined') NET.intent(d.x, d.y, -1);
+      }
+    }
+    trySell();
+    updateParticles(dt);
+    if (dirtyCells.size){
+      for (const i of dirtyCells) redrawCell(i);
+      dirtyCells.clear();
+    }
+  }
+  render(now/1000);
+}
+function render(t){
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(staticC, 0, 0);
+  ctx.drawImage(dirtC, 0, 0);
+  // pulsing sell-pad outline
+  ctx.strokeStyle = 'rgba(94,67,3,' + (0.55 + 0.4*Math.sin(t*3.2)) + ')';
+  ctx.lineWidth = 3;
+  roundRect(ctx, PAD.x+3, PAD.y+3, PAD.w-6, PAD.h-2, 10); ctx.stroke();
+  // drones
+  for (const d of dronesArr){
+    ctx.fillStyle = '#39415e'; ctx.beginPath(); ctx.arc(d.x, d.y, 13, 0, 7); ctx.fill();
+    ctx.fillStyle = '#8b5cf6'; ctx.beginPath(); ctx.arc(d.x, d.y, 8.5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(d.x, d.y, 2.6, 0, 7); ctx.fill();
+  }
+  drawPlayer(t);
+  if (typeof NET !== 'undefined') NET.drawRemotes(t);
+  // particles
+  for (const p of PPOOL){
+    if (!p.on) continue;
+    const a = Math.max(0, p.life / p.max);
+    if (p.text){
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.font = '800 ' + p.size + 'px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+    } else {
+      ctx.globalAlpha = a * 0.85;
+      ctx.fillStyle = p.color.length <= 9 ? p.color : p.color + Math.round(a*200).toString(16).padStart(2,'0') + ')';
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.5 + a*0.5), 0, 7); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+function drawPlayer(t){
+  const br = BRUSHES[S.brush];
+  // brush sweep disc (under player)
+  const sweep = Math.sin(t*7) * 0.45;
+  const bx = player.x + Math.cos(player.face + sweep) * 20;
+  const by = player.y + Math.sin(player.face + sweep) * 20;
+  ctx.strokeStyle = 'rgba(120,84,40,.9)'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(bx, by); ctx.stroke();
+  ctx.fillStyle = '#c9a86a';
+  ctx.save(); ctx.translate(bx, by); ctx.rotate(player.face + sweep);
+  ctx.fillRect(-3, -10, 7, 20); ctx.restore();
+  // scrub range hint ring (faint)
+  ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(player.x, player.y, br.r, 0, 7); ctx.stroke();
+  // body
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(player.x, player.y+13, 13, 5, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#2f9e8f'; ctx.beginPath(); ctx.arc(player.x, player.y, 13, 0, 7); ctx.fill();
+  ctx.fillStyle = '#ffd9b3'; ctx.beginPath(); ctx.arc(player.x, player.y - 3.5, 7.5, 0, 7); ctx.fill();
+  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(player.x, player.y - 6.5, 7.5, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#241a00'; ctx.fillRect(player.x - 8, player.y - 7.5, 16, 2.6);
+}
+
+// ---------------- HUD / panels ----------------
+const $ = id => document.getElementById(id);
+const money = n => '$' + Math.floor(n).toLocaleString('en-US');
+const hudCache = {};
+function setText(id, v){ if (hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
+function updateHUD(){
+  setText('cashVal', money(S.cash));
+  setText('bagVal', Math.floor(S.bagDust) + ' / ' + bagCap());
+  $('bagBar').firstElementChild.style.width = Math.min(100, S.bagDust / bagCap() * 100) + '%';
+  setText('roomName', ROOMS[S.room].name + (S.rooms[S.room].lv ? ' +' + S.rooms[S.room].lv : ''));
+  const pct = Math.round((1 - remainDirt / totalDirt) * 100);
+  setText('cleanVal', pct + '% clean');
+  $('cleanBar').firstElementChild.style.width = pct + '%';
+}
+setInterval(updateHUD, 200);
+let toastTimer = 0;
+function toast(msg){
+  const el = $('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2100);
+}
+function hideHint(){ if (!S.seenHint){ S.seenHint = true; $('hint').style.display = 'none'; } }
+if (S.seenHint) $('hint').style.display = 'none';
+function anyPanelOpen(){
+  return document.querySelector('.panel.open') !== null;
+}
+function openPanel(id){
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('open'));
+  $(id).classList.add('open');
+}
+function closePanels(){ document.querySelectorAll('.panel').forEach(p => p.classList.remove('open')); }
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closePanels));
+$('shopBtn').addEventListener('click', ()=>{ renderShop(); openPanel('shopPanel'); });
+$('roomsBtn').addEventListener('click', ()=>{ renderRooms(); openPanel('roomsPanel'); });
+
+// ---------------- Shop ----------------
+function buyRow(name, desc, price, state){
+  // state: 'equipped' | 'owned' | 'buy'
+  const btn = state === 'equipped' ? '<button class="buy equipped" disabled>EQUIPPED</button>'
+    : state === 'owned' ? '<button class="buy equipped" disabled>OWNED</button>'
+    : '<button class="buy" ' + (S.cash < price ? 'disabled' : '') + '>' + money(price) + '</button>';
+  return '<div class="row"><div class="info"><div class="nm">' + name + '</div><div class="ds">' + desc + '</div></div>' + btn + '</div>';
+}
+function renderShop(){
+  let h = '<div class="sect">🧹 Brushes — wider + faster scrubbing</div>';
+  BRUSHES.forEach((b,i)=>{
+    const st = i === S.brush ? 'equipped' : (i < S.brush ? 'owned' : 'buy');
+    h += buyRow(b.name, 'Radius ' + b.r + ' • Scrub speed ' + b.s, b.price, st).replace('<button class="buy"', '<button class="buy" data-buy="brush:' + i + '"');
+  });
+  h += '<div class="sect">🧺 Dust Bags — carry more before selling</div>';
+  BAGS.forEach((b,i)=>{
+    const st = i === S.bag ? 'equipped' : (i < S.bag ? 'owned' : 'buy');
+    h += buyRow(BAG_NAMES[i], 'Holds ' + b.cap + ' dust', b.price, st).replace('<button class="buy"', '<button class="buy" data-buy="bag:' + i + '"');
+  });
+  h += '<div class="sect">👟 Boots — move faster</div>';
+  BOOTS.forEach((b,i)=>{
+    const st = i === S.boots ? 'equipped' : (i < S.boots ? 'owned' : 'buy');
+    h += buyRow(b.name, '+' + (i*12) + '% move speed', b.price, st).replace('<button class="buy"', '<button class="buy" data-buy="boots:' + i + '"');
+  });
+  h += '<div class="sect">🤖 Helper Drones — auto-clean for you</div>';
+  const dst = S.drones >= DRONE_MAX ? 'owned' : 'buy';
+  h += buyRow('Roomba Buddy (' + S.drones + '/' + DRONE_MAX + ')', 'Seeks dirt and scrubs it into your bag', DRONE_PRICE, dst)
+        .replace('<button class="buy"', '<button class="buy" data-buy="drone:0"');
+  $('shopBody').innerHTML = h;
+  $('shopBody').querySelectorAll('[data-buy]').forEach(btn => btn.addEventListener('click', ()=>{
+    const [kind, idxS] = btn.dataset.buy.split(':'); const idx = +idxS;
+    let price = 0;
+    if (kind === 'brush'){ price = BRUSHES[idx].price; if (S.cash < price || idx <= S.brush) return; S.cash -= price; S.brush = idx; toast('New brush: ' + BRUSHES[idx].name + ' 🧹'); }
+    if (kind === 'bag'){ price = BAGS[idx].price; if (S.cash < price || idx <= S.bag) return; S.cash -= price; S.bag = idx; toast('New bag: ' + BAG_NAMES[idx] + ' 🧺'); }
+    if (kind === 'boots'){ price = BOOTS[idx].price; if (S.cash < price || idx <= S.boots) return; S.cash -= price; S.boots = idx; toast('New boots: ' + BOOTS[idx].name + ' 👟'); }
+    if (kind === 'drone'){ price = DRONE_PRICE; if (S.cash < price || S.drones >= DRONE_MAX) return; S.cash -= price; S.drones++; syncDrones(); toast('Drone deployed! 🤖'); }
+    save(); updateHUD(true); renderShop();
+  }));
+}
+
+// ---------------- Rooms ----------------
+function renderRooms(){
+  let h = '';
+  ROOMS.forEach((r,i)=>{
+    const rs = S.rooms[i];
+    const mult = (1 + 0.12*rs.lv).toFixed(2).replace(/\.?0+$/,'');
+    let btn;
+    if (i === S.room) btn = '<button class="buy equipped" disabled>YOU ARE HERE</button>';
+    else if (rs.u) btn = '<button class="buy alt" data-room="' + i + '">Go →</button>';
+    else btn = '<button class="buy" data-room="' + i + '" ' + (S.cash < r.unlock ? 'disabled' : '') + '>Unlock ' + money(r.unlock) + '</button>';
+    const status = rs.done ? '✅ Cleaned' + (rs.lv ? ' • re-messed ×' + rs.lv : '') : (rs.u ? '🧽 In progress' : '🔒 Locked');
+    h += '<div class="row"><div class="info"><div class="nm">' + r.name + '</div><div class="ds">' +
+         money(r.price * (1 + 0.12*rs.lv)) + ' per dust • Finish bonus ' + money(r.bonus * (1 + 0.12*rs.lv)) + ' • ' + status + '</div></div>' + btn + '</div>';
+  });
+  $('roomsBody').innerHTML = h;
+  $('roomsBody').querySelectorAll('[data-room]').forEach(btn => btn.addEventListener('click', ()=>{
+    const i = +btn.dataset.room;
+    if (!S.rooms[i].u){
+      if (S.cash < ROOMS[i].unlock) return;
+      S.cash -= ROOMS[i].unlock; S.rooms[i].u = true;
+      toast('Unlocked: ' + ROOMS[i].name + ' 🔓');
+    }
+    switchRoom(i);
+    closePanels();
+  }));
+}
+function switchRoom(i){
+  save(); // stash current grid first
+  S.room = i;
+  player.x = W/2; player.y = H - 130;
+  dronesArr.forEach((d,k)=>{ d.x = W/2 - 60 + k*44; d.y = H - 110; d.retarget = 0; });
+  renderStatic(); loadRoomGrid(i);
+  updateHUD(true);
+  save();
+}
+
+// ---------------- Done panel ----------------
+function openDone(bonus){
+  $('doneText').innerHTML = ROOMS[S.room].name + ' is spotless!<br>Completion bonus: <b style="color:#57d977">' + money(bonus) + '</b>';
+  const next = S.room + 1;
+  const nb = $('nextRoomBtn');
+  if (next < ROOMS.length){
+    nb.style.display = 'block';
+    nb.textContent = S.rooms[next].u ? 'Next Room: ' + ROOMS[next].name + ' →'
+      : 'Unlock ' + ROOMS[next].name + ' (' + money(ROOMS[next].unlock) + ') →';
+    nb.disabled = !S.rooms[next].u && S.cash < ROOMS[next].unlock;
+  } else nb.style.display = 'none';
+  openPanel('donePanel');
+}
+$('nextRoomBtn').addEventListener('click', ()=>{
+  if (typeof NET !== 'undefined' && NET.on){ NET.nextRoom(); closePanels(); return; }
+  const next = S.room + 1;
+  if (next >= ROOMS.length) return;
+  if (!S.rooms[next].u){
+    if (S.cash < ROOMS[next].unlock) return;
+    S.cash -= ROOMS[next].unlock; S.rooms[next].u = true;
+  }
+  switchRoom(next); closePanels();
+});
+$('remessBtn').addEventListener('click', ()=>{
+  if (typeof NET !== 'undefined' && NET.on){ NET.remess(); closePanels(); return; }
+  const rs = S.rooms[S.room];
+  rs.lv++; rs.done = false; rs.grid = null;
+  genDirt(S.room); redrawAllDirt();
+  player.x = W/2; player.y = H - 130;
+  closePanels(); save(); updateHUD(true);
+  toast(ROOMS[S.room].name + ' trashed again! Pay +12% 🗑️');
+});
+$('doneCloseBtn').addEventListener('click', closePanels);
+$('resetBtn').addEventListener('click', ()=>{
+  if (!confirm('Reset ALL Clean Sweep progress?')) return;
+  try { localStorage.removeItem(SAVE_KEY); } catch(e){}
+  location.reload();
+});
+
+// ---------------- Input ----------------
+window.addEventListener('keydown', e=>{
+  const k = e.key.toLowerCase();
+  if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+  keys[k] = true;
+});
+window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
+
+const stage = $('stage'), joyBase = $('joyBase'), joyNub = $('joyNub');
+let joyId = null, joyOrigin = { x:0, y:0 };
+function stagePos(cx, cy){
+  const r = stage.getBoundingClientRect();
+  return { x:(cx - r.left) / r.width * W, y:(cy - r.top) / r.height * H, sx: cx - r.left, sy: cy - r.top };
+}
+canvas.addEventListener('pointerdown', e=>{
+  if (joyId !== null) return;
+  joyId = e.pointerId;
+  const p = stagePos(e.clientX, e.clientY);
+  joyOrigin = { x:p.sx, y:p.sy };
+  joyBase.style.display = 'block'; joyNub.style.display = 'block';
+  joyBase.style.left = (p.sx - 55) + 'px'; joyBase.style.top = (p.sy - 55) + 'px';
+  joyNub.style.left = (p.sx - 24) + 'px'; joyNub.style.top = (p.sy - 24) + 'px';
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e=>{
+  if (e.pointerId !== joyId) return;
+  const r = stage.getBoundingClientRect();
+  let dx = (e.clientX - r.left) - joyOrigin.x, dy = (e.clientY - r.top) - joyOrigin.y;
+  const d = Math.hypot(dx, dy), max = 46;
+  if (d > max){ dx = dx/d*max; dy = dy/d*max; }
+  joyVec = { x: dx/max, y: dy/max };
+  if (Math.hypot(joyVec.x, joyVec.y) > 0.15) hideHint();
+  joyNub.style.left = (joyOrigin.x + dx - 24) + 'px';
+  joyNub.style.top = (joyOrigin.y + dy - 24) + 'px';
+});
+function joyEnd(e){
+  if (e.pointerId !== joyId) return;
+  joyId = null; joyVec = { x:0, y:0 };
+  joyBase.style.display = 'none'; joyNub.style.display = 'none';
+}
+canvas.addEventListener('pointerup', joyEnd);
+canvas.addEventListener('pointercancel', joyEnd);
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// ---------------- Online co-op (NET) ----------------
+var NET = {
+  on: false, ws: null, wsOpenFlag: false, id: 0, online: 0,
+  code: null, roomIdx: 0, isHost: false, hostId: 0, prevRoom: 0, pendingJoin: false,
+  players: new Map(), playerIntent: null, droneIntents: [],
+  lastPosSend: 0, lastSentX: -1, lastSentY: -1, lastIntentFlush: 0,
+  slipperyUntil: 0, bannerTimer: 0,
+};
+const escH = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+NET.slippery = () => Date.now() < NET.slipperyUntil;
+NET.send = obj => { if (NET.ws && NET.wsOpenFlag) { try { NET.ws.send(JSON.stringify(obj)); } catch(e){} } };
+NET.myName = () => ($('netName').value || 'Guest').trim().slice(0, 16) || 'Guest';
+
+NET.connect = () => {
+  if (NET.ws && (NET.wsOpenFlag || NET.ws.readyState === 0)) return;
+  if (location.protocol === 'file:') { $('netStatus').textContent = '⚠️ Co-op needs the game opened from the co-op server. Offline play still works!'; return; }
+  $('netStatus').textContent = 'Connecting…';
+  const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/';
+  let ws;
+  try { ws = new WebSocket(url); } catch(e){ $('netStatus').textContent = '⚠️ Could not reach the server.'; return; }
+  NET.ws = ws;
+  ws.onopen = () => {
+    NET.wsOpenFlag = true;
+    NET.send({ t: 'hello', name: NET.myName() });
+    NET.send({ t: 'lobby' });
+  };
+  ws.onclose = () => {
+    NET.wsOpenFlag = false;
+    $('netStatus').textContent = '⚠️ Disconnected — offline play still works!';
+    if (NET.on) NET.exitToLocal();
+  };
+  ws.onerror = () => { $('netStatus').textContent = '⚠️ Server unreachable — offline play still works!'; };
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(ev.data); } catch(e){ return; }
+    NET.onMsg(m);
+  };
+};
+
+NET.onMsg = m => {
+  switch (m.t) {
+    case 'welcome': NET.id = m.id; NET.online = m.online; NET.setStatus(); break;
+    case 'presence': NET.online = m.online; NET.setStatus(); NET.updatePill(); break;
+    case 'lobby': NET.online = m.online; NET.setStatus(); NET.renderLobby(m); break;
+    case 'err': NET.showErr(m.msg); break;
+    case 'joined': {
+      NET.prevRoom = S.room;
+      NET.code = m.code; NET.roomIdx = m.roomIdx; NET.hostId = m.hostId; NET.isHost = (m.hostId === NET.id);
+      NET.pendingJoin = true;
+      NET.applyPlayers(m.players, m.hostId);
+      break;
+    }
+    case 'snapshot': NET.adoptSnapshot(m); break;
+    case 'players': NET.applyPlayers(m.players, m.hostId); break;
+    case 'pos': {
+      const p = NET.players.get(m.id);
+      if (p) { p.tx = m.x; p.ty = m.y; p.face = m.face; }
+      break;
+    }
+    case 'dirt': {
+      if (!NET.on) break;
+      for (const [i, v] of m.cells) if (v < grid[i]) { grid[i] = v; dirtyCells.add(i); }
+      if (m.remain < remainDirt) remainDirt = m.remain;
+      break;
+    }
+    case 'complete': {
+      S.cash += m.bonus;
+      confetti(W/2, H/2 - 40);
+      spawnText(W/2, H/2 - 110, 'TEAM BONUS +$' + m.bonus.toLocaleString('en-US'), '#57d977');
+      save(); updateHUD(true);
+      setTimeout(() => NET.openDoneOnline(m.bonus), 650);
+      break;
+    }
+    case 'event': toast(m.msg); break;
+    case 'troll': NET.onTroll(m); break;
+  }
+};
+
+NET.setStatus = () => { $('netStatus').textContent = '🟢 ' + NET.online + ' player(s) online'; };
+NET.showErr = msg => {
+  const el = $('netErr');
+  el.textContent = msg || '';
+  setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4500);
+};
+NET.applyPlayers = (list, hostId) => {
+  NET.hostId = hostId; NET.isHost = (hostId === NET.id);
+  const seen = new Set();
+  for (const p of list) {
+    if (p.id === NET.id) continue;
+    seen.add(p.id);
+    const old = NET.players.get(p.id);
+    if (old) { old.name = p.name; old.color = p.color; old.tx = p.x; old.ty = p.y; }
+    else NET.players.set(p.id, { name: p.name, color: p.color, x: p.x, y: p.y, tx: p.x, ty: p.y, face: 0 });
+  }
+  for (const id of [...NET.players.keys()]) if (!seen.has(id)) NET.players.delete(id);
+  NET.updateRoomInfo(list);
+  NET.updatePill();
+};
+NET.updateRoomInfo = list => {
+  if (!NET.code) return;
+  $('netRoomInfo').style.display = 'block';
+  $('netLobby').style.display = 'none';
+  $('netCode').textContent = NET.code;
+  const names = list.map(p => escH(p.name) + (p.id === NET.hostId ? ' 👑' : '') + (p.id === NET.id ? ' (you)' : ''));
+  $('netPlayers').innerHTML = ROOMS[NET.roomIdx].name + ' • ' + list.length + '/4 cleaning<br>' + names.join(' • ');
+};
+NET.updatePill = () => {
+  const pill = $('onlinePill');
+  if (NET.on) {
+    pill.style.display = 'flex';
+    $('onlinePillTxt').textContent = '🟢 ' + (NET.players.size + 1) + ' in room • ' + NET.online + ' online';
+  } else pill.style.display = 'none';
+};
+NET.adoptSnapshot = snap => {
+  NET.roomIdx = snap.roomIdx;
+  if (NET.pendingJoin) {
+    NET.pendingJoin = false;
+    NET.on = true;
+    S.room = NET.roomIdx;
+    player.x = W/2; player.y = H - 130;
+    renderStatic();
+    toast('You joined room ' + NET.code + ' 🌐');
+  } else if (NET.on) {
+    S.room = NET.roomIdx;
+    renderStatic();
+    if ($('donePanel').classList.contains('open')) closePanels();
+  } else return;
+  makeBlobs(ROOMS[NET.roomIdx].dirt, ROOMS[NET.roomIdx].speck);
+  try { grid = gridFromB64(snap.grid); } catch(e){ return; }
+  totalDirt = snap.total; remainDirt = snap.remain;
+  for (let i = 0; i < NCELLS; i++) cellSpr[i] = (Math.random()*5)|0;
+  redrawAllDirt();
+  updateHUD(true);
+  NET.updatePill();
+};
+NET.exitToLocal = () => {
+  NET.on = false; NET.code = null; NET.pendingJoin = false;
+  NET.players.clear(); NET.playerIntent = null; NET.droneIntents = [];
+  S.room = NET.prevRoom;
+  player.x = W/2; player.y = H - 130;
+  renderStatic(); loadRoomGrid(S.room);
+  $('netRoomInfo').style.display = 'none';
+  $('netLobby').style.display = 'block';
+  NET.updatePill();
+  updateHUD(true);
+};
+NET.leave = () => { NET.send({ t: 'leave' }); NET.exitToLocal(); NET.send({ t: 'lobby' }); };
+NET.remess = () => NET.send({ t: 'remess' });
+NET.nextRoom = () => NET.send({ t: 'nextroom' });
+
+NET.intent = (x, y, brush) => {
+  if (!NET.on) return;
+  if (brush >= 0) NET.playerIntent = { x: Math.round(x), y: Math.round(y), brush };
+  else if (NET.droneIntents.length < 4) NET.droneIntents.push({ x: Math.round(x), y: Math.round(y), brush: -1 });
+};
+NET.posTick = now => {
+  if (!NET.on || !NET.wsOpenFlag) return;
+  if (now - NET.lastPosSend >= 100) {
+    if (Math.abs(player.x - NET.lastSentX) > 2 || Math.abs(player.y - NET.lastSentY) > 2) {
+      NET.lastSentX = player.x; NET.lastSentY = player.y; NET.lastPosSend = now;
+      NET.send({ t: 'pos', x: Math.round(player.x), y: Math.round(player.y), face: player.face });
+    }
+  }
+  if (now - NET.lastIntentFlush >= 150) {
+    NET.lastIntentFlush = now;
+    if (NET.playerIntent) { NET.send(Object.assign({ t: 'scrub' }, NET.playerIntent)); NET.playerIntent = null; }
+    if (NET.droneIntents.length) NET.send(Object.assign({ t: 'scrub' }, NET.droneIntents.shift()));
+  }
+};
+NET.drawRemotes = t => {
+  if (!NET.on) return;
+  for (const p of NET.players.values()) {
+    p.x += (p.tx - p.x) * 0.3; p.y += (p.ty - p.y) * 0.3;
+    ctx.fillStyle = 'rgba(0,0,0,.25)';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 13, 13, 5, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 13, 0, 7); ctx.fill();
+    ctx.fillStyle = '#ffd9b3';
+    ctx.beginPath(); ctx.arc(p.x, p.y - 3.5, 7.5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#ffd23f';
+    ctx.beginPath(); ctx.arc(p.x, p.y - 6.5, 7.5, Math.PI, 0); ctx.fill();
+    ctx.font = '700 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(0,0,0,.65)';
+    ctx.fillText(p.name, p.x + 1, p.y - 20 + 1);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(p.name, p.x, p.y - 20);
+  }
+};
+
+NET.showBanner = (text, ms) => {
+  const b = $('banner');
+  b.textContent = text;
+  b.classList.add('show');
+  clearTimeout(NET.bannerTimer);
+  NET.bannerTimer = setTimeout(() => b.classList.remove('show'), ms || 2600);
+};
+NET.onTroll = m => {
+  switch (m.kind) {
+    case 'messbomb': {
+      NET.showBanner('🗑️ MESS BOMB! The owner trashed the place!', 3000);
+      if (!NET.on) {
+        addSplatsLocal(30);
+        totalDirt = 0; for (let i = 0; i < NCELLS; i++) totalDirt += grid[i];
+        if (totalDirt < 1) totalDirt = 1;
+        remainDirt = totalDirt;
+        S.rooms[S.room].done = false;
+        redrawAllDirt(); updateHUD(true); save();
+      }
+      break;
+    }
+    case 'slippery':
+      NET.slipperyUntil = Date.now() + 30000;
+      NET.showBanner('🧊 SLIPPERY FLOOR! Controls are cursed for 30s!', 3000);
+      break;
+    case 'duststorm': {
+      const add = Math.min(25, bagCap() - S.bagDust);
+      if (add > 0) S.bagDust += add;
+      for (let i = 0; i < 34; i++)
+        spawnP({ x: Math.random()*W, y: -10 - Math.random()*60, vx: (Math.random()-0.5)*20, vy: 70 + Math.random()*70,
+                 max: 1.6, size: 3 + Math.random()*3, color: '#ffd23f', text: null, grav: 30 });
+      NET.showBanner('🌟 DUST STORM! Free dust for everyone!', 3000);
+      updateHUD(true);
+      break;
+    }
+    case 'confetti':
+      confetti(player.x, player.y - 24);
+      break;
+    case 'announce':
+      NET.showBanner('📣 ' + (m.msg || ''), 4200);
+      break;
+    case 'fakerestart': {
+      NET.showBanner('⚠️ Server restarting in 10 seconds…', 2400);
+      setTimeout(() => NET.showBanner('⚠️ Restarting in 3… 2… 1…', 2400), 2600);
+      setTimeout(() => NET.showBanner('😄 Just kidding! The owner is trolling.', 3200), 5200);
+      break;
+    }
+  }
+};
+function addSplatsLocal(count) {
+  for (let s = 0; s < count; s++) {
+    const cx = (Math.random()*COLS)|0, cy = (Math.random()*ROWS)|0;
+    const rad = 1 + Math.random()*2.2, str = 0.45 + Math.random()*0.55, r2 = Math.ceil(rad);
+    for (let y = cy - r2; y <= cy + r2; y++) for (let x = cx - r2; x <= cx + r2; x++) {
+      if (x < 0 || y < 0 || x >= COLS || y >= ROWS) continue;
+      const d = Math.hypot(x - cx, y - cy);
+      if (d <= rad) { const i = y*COLS + x; grid[i] = Math.min(1, grid[i] + str * (1 - d / (rad + 0.6))); }
+    }
+  }
+}
+
+NET.openDoneOnline = bonus => {
+  $('doneText').innerHTML = 'Your crew cleaned ' + ROOMS[NET.roomIdx].name + ' together!<br>Team bonus: <b style="color:#57d977">' + money(bonus) + '</b> each';
+  const nb = $('nextRoomBtn'), rb = $('remessBtn');
+  if (NET.isHost) {
+    rb.disabled = false; rb.textContent = 'Mess It Up Again';
+    if (NET.roomIdx < ROOMS.length - 1) { nb.style.display = 'block'; nb.disabled = false; nb.textContent = 'Next Room: ' + ROOMS[NET.roomIdx + 1].name + ' →'; }
+    else nb.style.display = 'none';
+  } else {
+    nb.style.display = 'none';
+    rb.disabled = true; rb.textContent = 'Waiting for the host… 👑';
+  }
+  openPanel('donePanel');
+};
+NET.renderLobby = m => {
+  const box = $('netRooms');
+  if (!m.rooms || !m.rooms.length) { box.innerHTML = '<p class="tip">None yet — start one!</p>'; return; }
+  box.innerHTML = m.rooms.map(r =>
+    '<div class="row"><div class="info"><div class="nm">' + ROOMS[r.roomIdx].name + '</div><div class="ds">' +
+    r.players + '/' + r.max + ' cleaners • room ' + r.code + '</div></div>' +
+    '<button class="buy alt" data-joinroom="' + r.code + '"' + (r.players >= r.max ? ' disabled' : '') + '>Join →</button></div>'
+  ).join('');
+  box.querySelectorAll('[data-joinroom]').forEach(b => b.addEventListener('click', () => NET.send({ t: 'join', code: b.dataset.joinroom })));
+};
+NET.init = () => {
+  const nameEl = $('netName');
+  try { nameEl.value = localStorage.getItem('cleansweep-name') || ''; } catch(e){}
+  nameEl.addEventListener('change', () => {
+    try { localStorage.setItem('cleansweep-name', nameEl.value); } catch(e){}
+    NET.send({ t: 'hello', name: NET.myName() });
+  });
+  $('onlineBtn').addEventListener('click', () => { openPanel('onlinePanel'); NET.connect(); });
+  $('netQuickBtn').addEventListener('click', () => NET.send({ t: 'quick', roomIdx: +$('netRoomSel').value }));
+  $('netCreateBtn').addEventListener('click', () => NET.send({ t: 'create', roomIdx: +$('netRoomSel').value, private: true }));
+  $('netJoinBtn').addEventListener('click', () => {
+    const code = $('netCodeInput').value.toUpperCase().trim();
+    if (code.length === 4) NET.send({ t: 'join', code });
+    else NET.showErr('Enter the 4-letter room code.');
+  });
+  $('netLeaveBtn').addEventListener('click', () => NET.leave());
+};
+
+// ---------------- Boot ----------------
+load();
+if (S.seenHint) $('hint').style.display = 'none';
+syncDrones();
+renderStatic();
+loadRoomGrid(S.room);
+player.x = W/2; player.y = H - 130;
+updateHUD(true);
+if (typeof NET !== 'undefined') NET.init();
+setInterval(save, 5000);
+window.addEventListener('beforeunload', save);
+document.addEventListener('visibilitychange', ()=>{ if (document.hidden) save(); });
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
