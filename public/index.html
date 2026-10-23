@@ -507,7 +507,7 @@ function scrubAt(x, y, R, rate, dt){
   }
   if (removed > 0){
     S.bagDust += removed; remainDirt = Math.max(0, remainDirt - removed);
-    if (!(typeof NET !== 'undefined' && NET.on) && !S.rooms[S.room].done && remainDirt <= Math.max(1.5, totalDirt*0.004)) completeRoom();
+    if (!(typeof NET !== 'undefined' && NET.on) && !S.rooms[S.room].done && remainDirt <= Math.max(3, totalDirt*0.01)) completeRoom();
   }
   return removed;
 }
@@ -516,7 +516,7 @@ function scrubAt(x, y, R, rate, dt){
 function completeRoom(){
   const rs = S.rooms[S.room];
   rs.done = true;
-  for (let i=0;i<NCELLS;i++) if (grid[i] < 0.06){ if (grid[i] > 0.02) dirtyCells.add(i); grid[i] = 0; }
+  for (let i=0;i<NCELLS;i++){ if (grid[i] > 0.02) dirtyCells.add(i); grid[i] = 0; }
   remainDirt = 0;
   const bonus = Math.round(ROOMS[S.room].bonus * payMult());
   S.cash += bonus;
@@ -606,6 +606,7 @@ function loop(now){
         if (rd > 0 && typeof NET !== 'undefined') NET.intent(d.x, d.y, -1);
       }
     }
+    if (!(typeof NET !== 'undefined' && NET.on) && !S.rooms[S.room].done && totalDirt > 0 && remainDirt <= Math.max(3, totalDirt * 0.01)) completeRoom();
     trySell();
     updateParticles(dt);
     if (dirtyCells.size){
