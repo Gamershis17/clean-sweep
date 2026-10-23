@@ -113,7 +113,17 @@ function roomSnapshot(room) {
   return { t: 'snapshot', code: room.code, roomIdx: room.roomIdx, grid: gridToB64(room.grid), total: room.total, remain: room.remain };
 }
 function roomPlayers(room) {
-  return [...room.players.values()].map(p => ({ id: p.id, name: p.name, color: p.color, x: Math.round(p.x), y: Math.round(p.y) }));
+  return [...room.players.values()].map(p => ({ id: p.id, name: p.name, color: p.color, look: p.look || null, x: Math.round(p.x), y: Math.round(p.y) }));
+}
+const HEX = /^#[0-9a-f]{6}$/i;
+function sanitizeLook(look) {
+  const d = { skin: '#ffd9b3', shirt: '#2f9e8f', cap: '#ffd23f' };
+  if (!look || typeof look !== 'object') return d;
+  return {
+    skin: HEX.test(look.skin || '') ? look.skin : d.skin,
+    shirt: HEX.test(look.shirt || '') ? look.shirt : d.shirt,
+    cap: HEX.test(look.cap || '') ? look.cap : d.cap,
+  };
 }
 
 // ---- http ----
@@ -175,7 +185,7 @@ function leaveRoom(c) {
 }
 function joinRoom(c, room) {
   leaveRoom(c);
-  const p = { id: c.id, ws: c.ws, name: c.name, color: COLORS[room.players.size % COLORS.length], x: W / 2, y: H - 130 };
+  const p = { id: c.id, ws: c.ws, name: c.name, color: COLORS[room.players.size % COLORS.length], look: c.look || null, x: W / 2, y: H - 130 };
   if (room.players.size === 0) room.hostId = c.id;
   room.players.set(c.id, p);
   c.room = room; c.player = p;
@@ -198,7 +208,8 @@ wss.on('connection', (ws) => {
       case 'hello': {
         const name = String(m.name || 'Guest').replace(/[^\w\s\-!.]/g, '').trim().slice(0, 16);
         c.name = name || 'Guest';
-        if (c.player) c.player.name = c.name;
+        c.look = sanitizeLook(m.look);
+        if (c.player) { c.player.name = c.name; c.player.look = c.look; }
         if (c.room) broadcastRoom(c.room, { t: 'players', players: roomPlayers(c.room), hostId: c.room.hostId });
         break;
       }
